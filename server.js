@@ -158,7 +158,8 @@ const setupWSConnection = require("./utils.js").setupWSConnection;
 // const host = process.env.HOST || "localhost";
 const port = process.env.PORT || 9595;
 
-const host = "yjs-node.onrender.com" 
+const host = "0.0.0.0";
+// const host = "yjs-node.onrender.com" 
 // const port = 9595;
 
 const server = http.createServer((request, response) => {
