@@ -150,13 +150,13 @@
  * @type {any}
  */
 const WebSocket = require("ws");
-// const http = require("http");
 const https = require("https");
+// const http = require("http");
 const wss = new WebSocket.Server({ noServer: true });
 const setupWSConnection = require("./utils.js").setupWSConnection;
 
 // const host = process.env.HOST || "localhost";
-const port = process.env.PORT || 9595;
+const port = process.env.PORT || 10000;
 
 const host = "0.0.0.0";
 // const host = "yjs-node.onrender.com"
@@ -172,11 +172,11 @@ const server = https.createServer((request, response) => {
 //   response.end("okay");
 // });
 
-// wss.on("connection", setupWSConnection);
-wss.on("connection", () => {
-  console.log("connection Started")
-  setupWSConnection();
-});
+wss.on("connection", setupWSConnection);
+// wss.on("connection", () => {
+//   console.log("connection Started")
+//   setupWSConnection();
+// });
 
 wss.on("message", (message) => {
   console.log("Received message:", message);
