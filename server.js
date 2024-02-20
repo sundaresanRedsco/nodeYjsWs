@@ -156,10 +156,10 @@ const wss = new WebSocket.Server({ noServer: true });
 const setupWSConnection = require("./utils.js").setupWSConnection;
 
 // const host = process.env.HOST || "localhost";
-// const port = process.env.PORT || 9595;
+const port = process.env.PORT || 9595;
 
 const host = "yjs-node.onrender.com" 
-const port = 9595;
+// const port = 9595;
 
 const server = http.createServer((request, response) => {
   response.writeHead(200, { "Content-Type": "text/plain" });
