@@ -200,14 +200,15 @@
 
 
 
-
-
 const WebSocket = require('ws');
+const http = require('http');
 
-const wss = new WebSocket.Server({ port: 8080 });
+// Create an HTTP server
+const server = http.createServer();
+const wss = new WebSocket.Server({ server });
 
-wss.on('connection', function connection(ws) {
-  console.log('A new client connected');
+wss.on('connection', function connection(ws, req) {
+  console.log('A new client connected from:', req.headers.host || req.connection.remoteAddress);
 
   ws.on('message', function incoming(message) {
     console.log('Received: %s', message);
@@ -220,4 +221,8 @@ wss.on('connection', function connection(ws) {
   });
 });
 
-console.log('WebSocket server is listening on port 8080');
+// Start listening on port 8080
+server.listen(8080, function() {
+  const address = server.address();
+  console.log('WebSocket server is running on:', address.address + ':' + address.port);
+});
