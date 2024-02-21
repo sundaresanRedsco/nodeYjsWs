@@ -200,15 +200,19 @@
 
 
 
+
+
 const WebSocket = require('ws');
-const http = require('http');
 
-// Create an HTTP server
-const server = http.createServer();
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ port: 0 }); // Set port to 0 to dynamically allocate a port
 
-wss.on('connection', function connection(ws, req) {
-  console.log('A new client connected from:', req.headers.host || req.connection.remoteAddress);
+wss.on('listening', function () {
+  const port = wss.address().port;
+  console.log(`WebSocket server is listening on port ${port}`);
+});
+
+wss.on('connection', function connection(ws) {
+  console.log('A new client connected');
 
   ws.on('message', function incoming(message) {
     console.log('Received: %s', message);
@@ -219,10 +223,4 @@ wss.on('connection', function connection(ws, req) {
   ws.on('close', function close() {
     console.log('Client disconnected');
   });
-});
-
-// Start listening on port 8080
-server.listen(8080, function() {
-  const address = server.address();
-  console.log('WebSocket server is running on:', address.address + ':' + address.port);
 });
