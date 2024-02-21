@@ -209,12 +209,12 @@
 // });
 
 // console.log("server running port", PORT);
-const https = require("https");
+const https = require("http");
 const PORT = process.env.PORT || 4000;
 const express = require("express");
 const WebSocket = require("ws");
 const app = express();
-const server = https.createServer(app);
+const server = http.createServer(app);
 
 server.listen(PORT, function () {
   console.log("Server running");
