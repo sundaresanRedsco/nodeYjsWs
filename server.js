@@ -228,20 +228,41 @@
 
 
 
-const https = require('https')
-const express = require('express')
-const WebSocket = require('ws')
-const app = express();
-const server = https.createServer(app)
+// const https = require('https')
+// const express = require('express')
+// const WebSocket = require('ws')
+// const app = express();
+// const server = https.createServer(app)
 
-server.listen(1337, function () {
-    console.log('Server running')
-})
+// server.listen(1337, function () {
+//     console.log('Server running')
+// })
 
 
 
-const wss = new WebSocket.Server({server});
+// const wss = new WebSocket.Server({server});
 
-wss.on('connection', function (ws) {
-    console.log('new connection')
-})
+// wss.on('connection', function (ws) {
+//     console.log('new connection')
+// })
+
+
+const https = require('https');
+
+// Create an HTTP server
+const server = https.createServer((req, res) => {
+  // Set the response headers
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+
+  // Send the response body
+  res.end('Hello, World!\n');
+});
+
+// Specify the port to listen on
+const PORT = 9595;
+
+// Start the server and listen on the specified port
+server.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}/`);
+});
+
