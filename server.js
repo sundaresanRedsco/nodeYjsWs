@@ -209,7 +209,7 @@
 // });
 
 // console.log("server running port", PORT);
-const https = require("http");
+const http = require("http");
 const PORT = process.env.PORT || 4000;
 const express = require("express");
 const WebSocket = require("ws");
