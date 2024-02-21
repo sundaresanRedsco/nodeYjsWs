@@ -149,54 +149,54 @@
 /**
  * @type {any}
  */
-// const WebSocket = require("ws");
-// // const https = require("https");
-// const http = require("http");
-// const wss = new WebSocket.Server({ noServer: true });
-// const setupWSConnection = require("./utils.js").setupWSConnection;
+const WebSocket = require("ws");
+// const https = require("https");
+const http = require("http");
+const wss = new WebSocket.Server({ noServer: true });
+const setupWSConnection = require("./utils.js").setupWSConnection;
 
 // const host = process.env.HOST || "localhost";
-// const port = process.env.PORT || 9595;
+const port = process.env.PORT || 3000;
 
-// // const host = "0.0.0.0";
-// // const host = "yjs-node.onrender.com"
-// // const port = 9595;
+// const host = "0.0.0.0";
+// const host = "yjs-node.onrender.com"
+// const port = 9595;
 
-// const server = http.createServer((request, response) => {
+const server = http.createServer((request, response) => {
+  response.writeHead(200, { "Content-Type": "text/plain" });
+  response.end("okay");
+});
+
+// const server = https.createServer((request, response) => {
 //   response.writeHead(200, { "Content-Type": "text/plain" });
 //   response.end("okay");
 // });
 
-// // const server = https.createServer((request, response) => {
-// //   response.writeHead(200, { "Content-Type": "text/plain" });
-// //   response.end("okay");
-// // });
-
-// wss.on("connection", setupWSConnection);
-// // wss.on("connection", () => {
-// //   console.log("connection Started")
-// //   setupWSConnection();
-// // });
-
-// wss.on("message", (message) => {
-//   console.log("Received message:", message);
+wss.on("connection", setupWSConnection);
+// wss.on("connection", () => {
+//   console.log("connection Started")
+//   setupWSConnection();
 // });
 
-// server.on("upgrade", (request, socket, head) => {
-//   // You may check auth of request here..
-//   // See https://github.com/websockets/ws#client-authentication
-//   /**
-//    * @param {any} ws
-//    */
-//   const handleAuth = (ws) => {
-//     wss.emit("connection", ws, request);
-//   };
-//   wss.handleUpgrade(request, socket, head, handleAuth);
-// });
+wss.on("message", (message) => {
+  console.log("Received message:", message);
+});
 
-// server.listen(port, host, () => {
-//   console.log(`running at '${host}' on port ${port}`);
-// });
+server.on("upgrade", (request, socket, head) => {
+  // You may check auth of request here..
+  // See https://github.com/websockets/ws#client-authentication
+  /**
+   * @param {any} ws
+   */
+  const handleAuth = (ws) => {
+    wss.emit("connection", ws, request);
+  };
+  wss.handleUpgrade(request, socket, head, handleAuth);
+});
+
+server.listen(port, () => {
+  console.log(`running at 'host' on port ${port}`);
+});
 
 // const WebSocket = require("ws");
 // const PORT = process.env.PORT || 3000;
@@ -209,20 +209,20 @@
 // });
 
 // console.log("server running port", PORT);
-const http = require("http");
-const PORT = process.env.PORT || 4000;
-const express = require("express");
-const WebSocket = require("ws");
-const app = express();
-const server = http.createServer(app);
+// const http = require("http");
+// const PORT = process.env.PORT || 4000;
+// const express = require("express");
+// const WebSocket = require("ws");
+// const app = express();
+// const server = http.createServer(app);
 
-server.listen(PORT, function () {
-  console.log("Server running");
-});
+// server.listen(PORT, function () {
+//   console.log("Server running");
+// });
 
-const wss = new WebSocket.Server({ server });
+// const wss = new WebSocket.Server({ server });
 
-wss.on("connection", function (ws) {
-  console.log("new connection");
-});
-console.log("PORT:", PORT);
+// wss.on("connection", function (ws) {
+//   console.log("new connection");
+// });
+// console.log("PORT:", PORT);
