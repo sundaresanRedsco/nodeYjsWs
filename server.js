@@ -198,36 +198,17 @@
 //   console.log(`running at '${host}' on port ${port}`);
 // });
 
-
-
-
-
-const WebSocket = require('ws');
-
-const wss = new WebSocket.Server({ port: 0 }); // Set port to 0 to dynamically allocate a port
-
-wss.on('listening', function () {
-  const port = wss.address().port;
-  console.log(`WebSocket server is listening on port ${port}`);
+const WebSocket = require("ws");
+const PORT = process.env.PORT || 3000;
+const wss = new WebSocket.Server({ port: PORT });
+wss.on("connection", (ws) => {
+  ws.on("message", (message) => {
+    console.log(`Received message => ${message}`);
+  });
+  ws.send("Hello! Message From Server!!");
 });
 
-wss.on('connection', function connection(ws) {
-  console.log('A new client connected');
-
-  ws.on('message', function incoming(message) {
-    console.log('Received: %s', message);
-    // Echo the received message back to the client
-    ws.send(`Echo: ${message}`);
-  });
-
-  ws.on('close', function close() {
-    console.log('Client disconnected');
-  });
-});
-
-
-
-
+console.log("server running port", PORT);
 // const http = require('http')
 // const express = require('express')
 // const WebSocket = require('ws')
@@ -238,12 +219,8 @@ wss.on('connection', function connection(ws) {
 //     console.log('Server running')
 // })
 
-
-
 // const wss = new WebSocket.Server({server});
 
 // wss.on('connection', function (ws) {
 //     console.log('new connection')
 // })
-
-
