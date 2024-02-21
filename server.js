@@ -228,11 +228,11 @@
 
 
 
-const http = require('http')
+const https = require('https')
 const express = require('express')
 const WebSocket = require('ws')
 const app = express();
-const server = http.createServer(app)
+const server = https.createServer(app)
 
 server.listen(1337, function () {
     console.log('Server running')
