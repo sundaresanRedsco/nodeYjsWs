@@ -198,29 +198,31 @@
 //   console.log(`running at '${host}' on port ${port}`);
 // });
 
+// const WebSocket = require("ws");
+// const PORT = process.env.PORT || 3000;
+// const wss = new WebSocket.Server({ port: PORT });
+// wss.on("connection", (ws) => {
+//   ws.on("message", (message) => {
+//     console.log(`Received message => ${message}`);
+//   });
+//   ws.send("Hello! Message From Server!!");
+// });
+
+// console.log("server running port", PORT);
+const https = require("https");
+const PORT = process.env.PORT || 4000;
+const express = require("express");
 const WebSocket = require("ws");
-const PORT = process.env.PORT || 3000;
-const wss = new WebSocket.Server({ port: PORT });
-wss.on("connection", (ws) => {
-  ws.on("message", (message) => {
-    console.log(`Received message => ${message}`);
-  });
-  ws.send("Hello! Message From Server!!");
+const app = express();
+const server = https.createServer(app);
+
+server.listen(PORT, function () {
+  console.log("Server running");
 });
 
-console.log("server running port", PORT);
-// const http = require('http')
-// const express = require('express')
-// const WebSocket = require('ws')
-// const app = express();
-// const server = http.createServer(app)
+const wss = new WebSocket.Server({ server });
 
-// server.listen(1337, function () {
-//     console.log('Server running')
-// })
-
-// const wss = new WebSocket.Server({server});
-
-// wss.on('connection', function (ws) {
-//     console.log('new connection')
-// })
+wss.on("connection", function (ws) {
+  console.log("new connection");
+});
+console.log("PORT:", PORT);
