@@ -1,7 +1,7 @@
 const Y = require("yjs");
 const syncProtocol = require("y-protocols/dist/sync.cjs");
 const awarenessProtocol = require("y-protocols/dist/awareness.cjs");
-
+const axios = require("axios");
 const encoding = require("lib0/dist/encoding.cjs");
 const decoding = require("lib0/dist/decoding.cjs");
 const map = require("lib0/dist/map.cjs");
@@ -174,7 +174,7 @@ exports.getYDoc = getYDoc;
  * @param {WSSharedDoc} doc
  * @param {Uint8Array} message
  */
-const messageListener = (conn, doc, message) => {
+const messageListener = async (conn, doc, message) => {
   try {
     const encoder = encoding.createEncoder();
     const decoder = decoding.createDecoder(message);
@@ -192,26 +192,6 @@ const messageListener = (conn, doc, message) => {
         // console.log(ydoc.getArray("nodes").toArray(), "ydoc");
         // console.log(doc.getArray("run").toArray(), "doc");
         // console.log(doc.getMap("run").toJSON(), "doc");
-
-        // if (
-        //   doc.getMap("run").toJSON()?.run?.action === "RUN" &&
-        //   doc.getMap("run").toJSON()?.run?.status !== "RUNNING"
-        // ) {
-        //   const runMap = doc.getMap("run");
-
-        //   if (runMap) {
-        //     // Retrieve the updateData object from the Yjs Map
-        //     const updateData = runMap.get("run");
-
-        //     if (updateData) {
-        //       // Update the status property
-        //       updateData.status = "RUNNING";
-
-        //       // Set the updated object back in the Yjs Map
-        //       runMap.set("run", updateData);
-        //     }
-        //   }
-        // }
 
         if (encoding.length(encoder) > 1) {
           send(doc, conn, encoding.toUint8Array(encoder));
@@ -238,6 +218,15 @@ const messageListener = (conn, doc, message) => {
         send(doc, conn, response);
         break;
     }
+    const runData = doc.getMap("run").toJSON()?.run;
+    // if (
+    //   runData &&
+    //   runData?.action === "RUN" &&
+    //   runData?.status !== "RUNNING" &&
+    //   runData?.status !== "COMPLETED"
+    // ) {
+    //   await runHandler(doc);
+    // }
   } catch (err) {
     console.error(err);
     doc.emit("error", [err]);
@@ -376,3 +365,250 @@ exports.setupWSConnection = (
     }
   }
 };
+
+// const processRunHandler = async (doc) => {
+//   try {
+//     // Call runHandler asynchronously
+//     await runHandler(doc);
+//   } catch (error) {
+//     console.error("Error in runHandler:", error);
+//     // Handle error as needed
+//   }
+// };
+
+async function runHandler(doc) {
+  const runMap = doc.getMap("run");
+  const nodeMap = doc.getMap("nodes");
+  const edgesMap = doc.getMap("edges");
+
+  const nodeArray = [];
+  let nodeJson = nodeMap?.toJSON();
+
+  Object.keys(nodeJson).forEach((key) => {
+    nodeArray.push(nodeJson[key].nodes);
+  });
+  // console.log(nodeArray, "nodeArray");
+  const edgesArray = [];
+  let edgesJson = edgesMap?.toJSON();
+
+  Object.keys(edgesJson).forEach((key) => {
+    edgesArray.push(edgesJson[key].edges);
+  });
+
+  // console.log(edgesArray, "edgesArray");
+
+  let currentEdge = getStartEdge(edgesArray); // Find the start edge to begin the flow
+  let continueFlow = true;
+
+  if (runMap) {
+    // Retrieve the updateData object from the Yjs Map
+    const updateData = runMap.get("run");
+
+    if (updateData) {
+      // Update the status property
+      updateData.status = "RUNNING";
+      updateData.next_node = currentEdge.target;
+      updateData.run_result = [];
+      runMap.set("run", updateData);
+    }
+  }
+
+  while (currentEdge && continueFlow) {
+    console.log(`Processing edge: ${currentEdge?.id}`);
+
+    // Perform operation
+    let operationSuccess = await performOperation(
+      doc,
+      currentEdge?.target,
+      doc.name
+    );
+    let succesValue = operationSuccess?.status == "SUCCESS" ? true : false;
+
+    let next_edge = getNextEdge(edgesArray, currentEdge?.target, succesValue);
+    console.log(next_edge, "operationSuccess");
+
+    if (runMap) {
+      // Retrieve the updateData object from the Yjs Map
+      const updateData = runMap.get("run");
+
+      if (updateData) {
+        // Update the status property
+        updateData.status = "RUNNING";
+        updateData.next_node = next_edge?.target;
+        updateData.run_result.push(operationSuccess);
+        runMap.set("run", updateData);
+      }
+    }
+
+    // Determine next edge based on operation result
+    currentEdge = getNextEdge(edgesArray, currentEdge.target, succesValue);
+
+    // Check if the flow should continue based on the result
+    continueFlow = shouldContinueFlow(currentEdge);
+  }
+
+  console.log("Flow stopped.");
+
+  if (runMap) {
+    // Retrieve the updateData object from the Yjs Map
+    const updateData = runMap.get("run");
+
+    if (updateData) {
+      // Update the status property
+      updateData.status = "COMPLETED";
+      updateData.next_node = null;
+      runMap.set("run", updateData);
+    }
+  }
+}
+
+// async function runHandler(doc) {
+
+//   const runMap = doc.getMap("run");
+//   const nodeMap = doc.getMap("nodes");
+//   const edgesMap = doc.getMap("edges");
+
+//   const nodeArray = [];
+//   let nodeJson = nodeMap?.toJSON();
+
+//   Object.keys(nodeJson).forEach((key) => {
+//     nodeArray.push(nodeJson[key].nodes);
+//   });
+//   // console.log(nodeArray, "nodeArray");
+//   const edgesArray = [];
+//   let edgesJson = edgesMap?.toJSON();
+
+//   Object.keys(edgesJson).forEach((key) => {
+//     edgesArray.push(edgesJson[key].edges);
+//   });
+
+//   // console.log(edgesArray, "edgesArray");
+
+//   let currentEdge = getStartEdge(edgesArray); // Find the start edge to begin the flow
+//   let continueFlow = true;
+
+//   if (runMap) {
+//     // Retrieve the updateData object from the Yjs Map
+//     const updateData = runMap.get("run");
+
+//     if (updateData) {
+//       // Update the status property
+//       updateData.status = "RUNNING";
+//       updateData.next_node = currentEdge.target;
+//       updateData.run_result = [];
+//       runMap.set("run", updateData);
+//     }
+//   }
+
+//   while (currentEdge && continueFlow) {
+//     console.log(`Processing edge: ${currentEdge?.id}`);
+
+//     // Perform operation
+//     let operationSuccess = await performOperation(
+//       doc,
+//       currentEdge?.target,
+//       doc.name
+//     );
+//     let succesValue = operationSuccess?.status == "SUCCESS" ? true : false;
+
+//     let next_edge = getNextEdge(edgesArray, currentEdge?.target, succesValue);
+//     console.log(next_edge, "operationSuccess");
+
+//     if (runMap) {
+//       // Retrieve the updateData object from the Yjs Map
+//       const updateData = runMap.get("run");
+
+//       if (updateData) {
+//         // Update the status property
+//         updateData.status = "RUNNING";
+//         updateData.next_node = next_edge?.target;
+//         updateData.run_result.push(operationSuccess);
+//         runMap.set("run", updateData);
+//       }
+//     }
+
+//     // Determine next edge based on operation result
+//     currentEdge = getNextEdge(edgesArray, currentEdge.target, succesValue);
+
+//     // Check if the flow should continue based on the result
+//     continueFlow = shouldContinueFlow(currentEdge);
+//   }
+
+//   console.log("Flow stopped.");
+
+//   if (runMap) {
+//     // Retrieve the updateData object from the Yjs Map
+//     const updateData = runMap.get("run");
+
+//     if (updateData) {
+//       // Update the status property
+//       updateData.status = "COMPLETED";
+//       updateData.next_node = null;
+//       runMap.set("run", updateData);
+//     }
+//   }
+// }
+
+function getStartEdge(edges) {
+  // Find the start edge based on your criteria
+  return edges.find((edge) =>
+    edge.sourceHandle?.endsWith("_start_startHandle")
+  );
+}
+
+function getNextEdge(edges, targetId, operationSuccess) {
+  // Find the next edge based on the target ID and operation result
+  return edges.find(
+    (edge) =>
+      edge.source === targetId &&
+      (operationSuccess
+        ? edge.sourceHandle.endsWith("_success")
+        : edge.sourceHandle.endsWith("_failure"))
+  );
+}
+
+async function performOperation(doc, targetId, flow_id) {
+  console.log("function Called");
+  try {
+    // Define the URL of the API endpoint you want to call
+    const nodeMap = doc.getMap("nodes");
+    let particular_node = nodeMap.get(targetId).nodes;
+    const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/save_and_fetch_by_operation_id?operation_id=${particular_node?.data.operation_id}&flow_id=${flow_id}&node_id=${targetId}`;
+    console.log("api url");
+    // Make a POST request to the API endpoint
+    const response = await axios.post(apiUrl);
+
+    // Log the response data
+    // console.log("Response:", response.data);
+
+    // Return the response data
+    console.log(response.data, "response.data");
+    return response.data;
+  } catch (error) {
+    // Handle errors here
+    console.error("Error:", error);
+    // You might want to throw the error here if you don't want to handle it locally
+    throw error;
+  }
+}
+
+// function performOperation(targetId) {
+//   return new Promise((resolve, reject) => {
+//     setTimeout(() => {
+//       // Simulate operation
+//       // This method would perform some operation using the targetId and return true for success or false for failure
+//       // Replace this with your actual operation logic
+//       const success = Math.floor(Math.random() * 2) === 0; // Simulate success or failure randomly
+//       if (success) {
+//         resolve(true); // Resolve with true for success
+//       } else {
+//         reject(false); // Reject with false for failure
+//       }
+//     }, 30000); // Delay for 30 seconds (30000 milliseconds)
+//   });
+// }
+
+function shouldContinueFlow(nextEdge) {
+  // Determine whether to continue the flow based on the next edge
+  return nextEdge !== null;
+}

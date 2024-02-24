@@ -120,29 +120,6 @@
 // // Log server start
 // console.log(`WebSocket server is listening on port ${PORT}`);
 
-// const express = require('express');
-// const http = require('http');
-// const WebSocket = require('ws');
-// const { Doc } = require('yjs');
-// const { WebsocketProvider } = require('y-websocket');
-
-// const app = express();
-// const server = http.createServer(app);
-// const wss = new WebSocket.Server({ server });
-
-// wss.on('connection', function connection(ws) {
-//   const doc = new Doc();
-//   const wsProvider = new WebsocketProvider(doc, ws, { awareness: null });
-
-//   ws.on('close', () => {
-//     wsProvider.destroy();
-//     doc.destroy();
-//   });
-// });
-
-// server.listen(8080, function () {
-//   console.log('WebSocket server is listening on port 8080');
-// });
 
 // #!/usr/bin/env node
 
@@ -156,7 +133,10 @@ const wss = new WebSocket.Server({ noServer: true });
 const setupWSConnection = require("./utils.js").setupWSConnection;
 
 // const host = process.env.HOST || "localhost";
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 9595;
+
+const express = require('express');
+const app = express();
 
 // const host = "0.0.0.0";
 // const host = "yjs-node.onrender.com"
@@ -198,31 +178,6 @@ server.listen(port, () => {
   console.log(`running at 'host' on port ${port}`);
 });
 
-// const WebSocket = require("ws");
-// const PORT = process.env.PORT || 3000;
-// const wss = new WebSocket.Server({ port: PORT });
-// wss.on("connection", (ws) => {
-//   ws.on("message", (message) => {
-//     console.log(`Received message => ${message}`);
-//   });
-//   ws.send("Hello! Message From Server!!");
-// });
 
-// console.log("server running port", PORT);
-// const http = require("http");
-// const PORT = process.env.PORT || 4000;
-// const express = require("express");
-// const WebSocket = require("ws");
-// const app = express();
-// const server = http.createServer(app);
 
-// server.listen(PORT, function () {
-//   console.log("Server running");
-// });
 
-// const wss = new WebSocket.Server({ server });
-
-// wss.on("connection", function (ws) {
-//   console.log("new connection");
-// });
-// console.log("PORT:", PORT);
