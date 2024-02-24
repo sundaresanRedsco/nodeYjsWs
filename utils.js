@@ -218,7 +218,7 @@ const messageListener = async (conn, doc, message) => {
         send(doc, conn, response);
         break;
     }
-    const runData = doc.getMap("run").toJSON()?.run;
+    // const runData = doc.getMap("run").toJSON()?.run;
     // if (
     //   runData &&
     //   runData?.action === "RUN" &&
