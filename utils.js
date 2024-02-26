@@ -218,15 +218,15 @@ const messageListener = async (conn, doc, message) => {
         send(doc, conn, response);
         break;
     }
-    // const runData = doc.getMap("run").toJSON()?.run;
-    // if (
-    //   runData &&
-    //   runData?.action === "RUN" &&
-    //   runData?.status !== "RUNNING" &&
-    //   runData?.status !== "COMPLETED"
-    // ) {
-    //   await runHandler(doc);
-    // }
+    const runData = doc.getMap("run").toJSON()?.run;
+    if (
+      runData &&
+      runData?.action === "RUN" &&
+      runData?.status !== "RUNNING" &&
+      runData?.status !== "COMPLETED"
+    ) {
+      await runHandler(doc);
+    }
   } catch (err) {
     console.error(err);
     doc.emit("error", [err]);
