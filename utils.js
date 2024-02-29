@@ -573,17 +573,31 @@ async function performOperation(doc, targetId, flow_id) {
     // Define the URL of the API endpoint you want to call
     const nodeMap = doc.getMap("nodes");
     let particular_node = nodeMap.get(targetId).nodes;
-    const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/save_and_fetch_by_operation_id?operation_id=${particular_node?.data.operation_id}&flow_id=${flow_id}&node_id=${targetId}`;
-    console.log("api url");
+    // const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/save_and_fetch_by_operation_id?operation_id=${particular_node?.data.operation_id}&flow_id=${flow_id}&node_id=${targetId}`;
+    const apiUrl = `https://jsonplaceholder.typicode.com/todos/1`;
+
+    console.log("api url", apiUrl);
     // Make a POST request to the API endpoint
-    const response = await axios.post(apiUrl);
+    // const response = await axios.post(apiUrl);
+    const response = await axios.get(apiUrl);
 
-    // Log the response data
-    // console.log("Response:", response.data);
+    let data =
+      // Log the response data
+      // console.log("Response:", response.data);
 
-    // Return the response data
-    console.log(response.data, "response.data");
-    return response.data;
+      // Return the response data
+      console.log(response.data, "response.data");
+    return {
+      node_id: targetId,
+      flow_id: flow_id,
+      statusCode: 200,
+      response: response.data,
+      isrun_completed: true,
+      action: "RUN",
+      request_status: "OK",
+      status: "SUCCESS",
+      next_node: null,
+    };
   } catch (error) {
     // Handle errors here
     console.error("Error:", error);
