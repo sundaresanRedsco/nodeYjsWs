@@ -46,7 +46,9 @@ if (typeof persistenceDir === "string") {
         ldb.storeUpdate(docName, update);
       });
     },
-    writeState: async (docName, ydoc) => {},
+    writeState: async (docName, ydoc) => {
+      return true;
+    },
   };
 }
 
@@ -258,12 +260,12 @@ const closeConn = (doc, conn) => {
       // persistence.writeState(doc.name, doc).then(() => {
       //   doc.destroy();
       // });
-
+      let data = saveHandler(doc, docs);
+      //  docs.delete(doc.name);
+      //    doc.destroy();
       // persistence.writeState(doc.name, doc).then(() => {
-      console.log("destroy");
-      doc.destroy();
+
       // });
-      docs.delete(doc.name);
     }
   }
   conn.close();
@@ -381,89 +383,280 @@ async function runHandler(doc) {
   const nodeMap = doc.getMap("nodes");
   const edgesMap = doc.getMap("edges");
 
-  const nodeArray = [];
-  let nodeJson = nodeMap?.toJSON();
+  try {
+    // Fetch updated nodes and edges from the API
+    // const getFulldata = await getApiFLowData(doc.name);
+    // const updatedNodes = getFulldata[0]?.nodes || [];
+    // const updatedEdges = getFulldata[0]?.edges || [];
 
-  Object.keys(nodeJson).forEach((key) => {
-    nodeArray.push(nodeJson[key].nodes);
-  });
-  // console.log(nodeArray, "nodeArray");
-  const edgesArray = [];
-  let edgesJson = edgesMap?.toJSON();
+    // const updatedNodes =  [];
+    // const updatedEdges =  [];
 
-  Object.keys(edgesJson).forEach((key) => {
-    edgesArray.push(edgesJson[key].edges);
-  });
+    // Update local node data structure
+    // for (const nodeId in nodeMap) {
+    //   const node = nodeMap[nodeId].nodes;
+    //   const index = updatedNodes.findIndex(
+    //     (updatedNode) => updatedNode.id === nodeId
+    //   );
+    //   if (index !== -1) {
+    //     nodeMap[nodeId].nodes = updatedNodes[index];
+    //   }
+    // }
 
-  // console.log(edgesArray, "edgesArray");
+    // // Update local edge data structure
+    // for (const edgeId in edgesMap) {
+    //   const edge = edgesMap[edgeId].edges;
+    //   const index = updatedEdges.findIndex(
+    //     (updatedEdge) => updatedEdge.id === edgeId
+    //   );
+    //   if (index !== -1) {
+    //     edgesMap[edgeId].edges = updatedEdges[index];
+    //   }
+    // }
 
-  let currentEdge = getStartEdge(edgesArray); // Find the start edge to begin the flow
-  let continueFlow = true;
+    const updatedNodes = [];
+    let nodeJson = nodeMap?.toJSON();
 
-  if (runMap) {
-    // Retrieve the updateData object from the Yjs Map
-    const updateData = runMap.get("run");
+    Object.keys(nodeJson).forEach((key) => {
+      updatedNodes.push(nodeJson[key].nodes);
+    });
+    // console.log(updatedNodes, "nodeArray");
+    const updatedEdges = [];
+    let edgesJson = edgesMap?.toJSON();
 
-    if (updateData) {
-      // Update the status property
-      updateData.status = "RUNNING";
-      updateData.next_node = currentEdge.target;
-      updateData.run_result = [];
-      runMap.set("run", updateData);
-    }
-  }
+    Object.keys(edgesJson).forEach((key) => {
+      updatedEdges.push(edgesJson[key].edges);
+    });
 
-  while (currentEdge && continueFlow) {
-    console.log(`Processing edge: ${currentEdge?.id}`);
+    // Start processing the flow
+    let currentEdge = getStartEdge(updatedEdges);
 
-    // Perform operation
-    let operationSuccess = await performOperation(
-      doc,
-      currentEdge?.target,
-      doc.name
-    );
-    let succesValue = operationSuccess?.status == "SUCCESS" ? true : false;
+    let continueFlow = true;
 
-    let next_edge = getNextEdge(edgesArray, currentEdge?.target, succesValue);
-    console.log(next_edge, "operationSuccess");
-
+    // Update the status to indicate the flow is running
     if (runMap) {
-      // Retrieve the updateData object from the Yjs Map
       const updateData = runMap.get("run");
-
       if (updateData) {
-        // Update the status property
         updateData.status = "RUNNING";
-        updateData.next_node = next_edge?.target;
-        updateData.run_result.push(operationSuccess);
+        updateData.next_node = currentEdge.target;
+        updateData.run_result = [];
         runMap.set("run", updateData);
       }
     }
 
-    // Determine next edge based on operation result
-    currentEdge = getNextEdge(edgesArray, currentEdge.target, succesValue);
+    // Main loop for processing edges
+    let previous_edge_response = null;
+    let i = 0;
+    var nextEdge = "";
+    while (currentEdge != undefined && currentEdge && continueFlow) {
+      console.log(`Processing edge: ${currentEdge?.id}`);
+      const currentNode = updatedNodes.find(
+        (x) => x.id === currentEdge?.target
+      );
+      console.log(`Processing i: ${i}`);
+      if (currentNode?.type == "operationNode") {
+        let requestBody = {
+          operation_inputs: [],
+          operation_headers: [],
+          operation_authorization: [],
+          operation_query_params: [],
+        };
+        // if (i != 0) {
+        console.log(previous_edge_response);
+        const object =
+          previous_edge_response?.response?.apiResponse?.data ||
+          previous_edge_response?.response?.apiResponse ||
+          {};
+        console.log(`Processing object`, object);
+        const Headerarray = currentNode?.data?.operations_header;
+        const Bodyarray = currentNode?.data?.operations_input;
+        const Queryarray = currentNode?.data?.operations_auth;
+        const Autharray = currentNode?.data?.operations_query_param;
 
-    // Check if the flow should continue based on the result
-    continueFlow = shouldContinueFlow(currentEdge);
-  }
+        // Mapping and updating each array
+        const newHeaderArray = Headerarray?.map((item) => {
+          const key = item?.name;
+          let value =
+            object[item?.selected_param] ||
+            object[item?.name] ||
+            item?.test_value;
 
-  console.log("Flow stopped.");
+          return { key, value: value.toString() };
+        });
 
-  if (runMap) {
-    // Retrieve the updateData object from the Yjs Map
-    const updateData = runMap.get("run");
+        const newBodyArray = Bodyarray?.map((item) => {
+          const key = item?.name;
+          let value =
+            object[item?.selected_param] ||
+            object[item?.name] ||
+            item?.test_value;
 
-    if (updateData) {
-      // Update the status property
-      updateData.status = "COMPLETED";
-      updateData.next_node = null;
-      runMap.set("run", updateData);
+          return { key, value: value.toString() };
+        });
+
+        const newQueryArray = Queryarray?.map((item) => {
+          const key = item?.name;
+          let value =
+            object[item?.selected_param] ||
+            object[item?.name] ||
+            item?.test_value;
+
+          return { key, value: value.toString() };
+        });
+
+        const newAuthArray = Autharray?.map((item) => {
+          const key = item?.name;
+          let value =
+            object[item?.selected_param] ||
+            object[item?.name] ||
+            item?.test_value;
+
+          return { key, value: value.toString() };
+        });
+
+        // console.log(newBodyArray, "Bodyarray");
+        requestBody = {
+          operation_inputs: newBodyArray,
+          operation_headers: newHeaderArray,
+          operation_authorization: newQueryArray,
+          operation_query_params: newAuthArray,
+        };
+        // } else {
+        // }
+
+        // Perform operation
+
+        const operationSuccess = await performOperation(
+          doc,
+          currentEdge.target,
+          doc.name,
+          currentNode,
+          requestBody
+        );
+
+        const successValue = operationSuccess?.status === "SUCCESS";
+        if (successValue) {
+          previous_edge_response = operationSuccess;
+        } else {
+          previous_edge_response = null;
+        }
+
+        nextEdge = getNextEdge(
+          updatedEdges,
+          currentEdge.target,
+          successValue,
+          currentNode?.type
+        );
+        if (runMap) {
+          const updateData = runMap.get("run");
+          if (updateData) {
+            updateData.status = "RUNNING";
+            updateData.next_node = nextEdge?.target;
+            updateData.run_result.push(operationSuccess);
+            runMap.set("run", updateData);
+          }
+        }
+      } else if (currentNode?.type === "responseNode") {
+        console.log("printBlockresponseNode");
+        nextEdge = getNextEdge(
+          updatedEdges,
+          currentEdge.target,
+          true,
+          currentNode?.type
+        );
+        if (runMap) {
+          const updateData = runMap.get("run");
+          if (updateData) {
+            updateData.status = "RUNNING";
+            updateData.next_node = nextEdge?.target;
+            updateData.run_result.push({});
+            runMap.set("run", updateData);
+          }
+        }
+      }
+      // Update the status based on operation result
+
+      // Determine the next edge
+      currentEdge = nextEdge;
+      i++;
+      continueFlow = shouldContinueFlow(currentEdge);
     }
+
+    console.log("Flow stopped.");
+
+    // Update the status to indicate completion
+    if (runMap) {
+      const updateData = runMap.get("run");
+      if (updateData) {
+        updateData.status = "COMPLETED";
+        updateData.next_node = null;
+        runMap.set("run", updateData);
+      }
+    }
+  } catch (error) {
+    console.error("Error occurred:", error);
+    // Handle errors gracefully
   }
 }
 
-// async function runHandler(doc) {
+async function performOperation(
+  doc,
+  targetId,
+  flow_id,
+  currentNode,
+  requestBody
+) {
+  console.log("function Called");
+  try {
+    // Define the URL of the API endpoint you want to call
+    // const nodeMap = doc.getMap("nodes");
+    // let particular_node = nodeMap.get(targetId).nodes;
+    let particular_node = currentNode;
+    const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/save_and_fetch_by_operation_id?operation_id=${particular_node?.data.operation_id}&flow_id=${flow_id}&node_id=${targetId}`;
+    console.log("api url", apiUrl);
+    // Make a POST request to the API endpoint
+    const response = await axios.post(apiUrl, requestBody);
 
+    // Log the response data
+    // console.log("Response:", response.data);
+
+    // Return the response data
+    // console.log(response.data, "response.data");
+    return response.data;
+  } catch (error) {
+    // Handle errors here
+    console.error("Error:", error);
+    // You might want to throw the error here if you don't want to handle it locally
+    throw error;
+  }
+}
+
+// async function performOperation(doc, targetId, flow_id) {
+//   console.log("function Called");
+//   try {
+//     // Define the URL of the API endpoint you want to call
+//     const nodeMap = doc.getMap("nodes");
+//     let particular_node = nodeMap.get(targetId).nodes;
+//     const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/save_and_fetch_by_operation_id?operation_id=${particular_node?.data.operation_id}&flow_id=${flow_id}&node_id=${targetId}`;
+//     console.log("api url", apiUrl);
+//     // Make a POST request to the API endpoint
+//     const response = await axios.post(apiUrl);
+
+//     // Log the response data
+//     // console.log("Response:", response.data);
+
+//     // Return the response data
+//     console.log(response.data, "response.data");
+//     return response.data;
+//   } catch (error) {
+//     // Handle errors here
+//     console.error("Error:", error);
+//     // You might want to throw the error here if you don't want to handle it locally
+//     throw error;
+//   }
+// }
+
+// async function runHandler(doc) {
 //   const runMap = doc.getMap("run");
 //   const nodeMap = doc.getMap("nodes");
 //   const edgesMap = doc.getMap("edges");
@@ -556,40 +749,22 @@ function getStartEdge(edges) {
   );
 }
 
-function getNextEdge(edges, targetId, operationSuccess) {
-  // Find the next edge based on the target ID and operation result
-  return edges.find(
-    (edge) =>
-      edge.source === targetId &&
-      (operationSuccess
-        ? edge.sourceHandle.endsWith("_success")
-        : edge.sourceHandle.endsWith("_failure"))
-  );
-}
-
-async function performOperation(doc, targetId, flow_id) {
-  console.log("function Called");
-  try {
-    // Define the URL of the API endpoint you want to call
-    const nodeMap = doc.getMap("nodes");
-    let particular_node = nodeMap.get(targetId).nodes;
-    const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/save_and_fetch_by_operation_id?operation_id=${particular_node?.data.operation_id}&flow_id=${flow_id}&node_id=${targetId}`;
-    console.log("api url", apiUrl);
-    // Make a POST request to the API endpoint
-    const response = await axios.post(apiUrl);
-
-    // Log the response data
-    // console.log("Response:", response.data);
-
-    // Return the response data
-    console.log(response.data, "response.data");
-    return response.data;
-  } catch (error) {
-    // Handle errors here
-    console.error("Error:", error);
-    // You might want to throw the error here if you don't want to handle it locally
-    throw error;
+function getNextEdge(edges, targetId, operationSuccess, nodetype) {
+  if (nodetype === "operationNode") {
+    return edges.find(
+      (edge) =>
+        edge.source === targetId &&
+        (operationSuccess
+          ? edge.sourceHandle.endsWith("_success")
+          : edge.sourceHandle.endsWith("_failure"))
+    );
+  } else if (nodetype === "responseNode") {
+    return edges.find(
+      (edge) =>
+        edge.source === targetId && edge.sourceHandle.endsWith("_output")
+    );
   }
+  // Find the next edge based on the target ID and operation result
 }
 
 // function performOperation(targetId) {
@@ -611,4 +786,70 @@ async function performOperation(doc, targetId, flow_id) {
 function shouldContinueFlow(nextEdge) {
   // Determine whether to continue the flow based on the next edge
   return nextEdge !== null;
+}
+
+async function saveHandler(doc, docs) {
+  // try {
+  //   const nodeMap = doc.getMap("nodes");
+  //   const edgesMap = doc.getMap("edges");
+  //   const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/store_api_design_flow_by_design_flow?api_flow_id=${doc.name}`;
+  //   const apiDeleteUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/bulk_delete_by_node_id_and_edge_id`;
+
+  //   // Prepare data from Yjs maps
+  //   const { nodeArray, deleteNodeId } = prepareNodes(nodeMap);
+  //   const { edgesArray, deleteEdgeId } = prepareEdges(edgesMap);
+
+  //   // Construct request bodies
+  //   const requestBody = {
+  //     nodes: nodeArray,
+  //     edges: edgesArray,
+  //     viewport: { x: 0, y: 0, zoom: 0 },
+  //   };
+  //   const deleteRequestBody = { node_id: deleteNodeId, edge_id: deleteEdgeId };
+
+  //   // Make POST requests to delete and save endpoints
+  //   const responseDelete = await axios.post(apiDeleteUrl, deleteRequestBody);
+  //   const responseBody = await axios.post(apiUrl, requestBody);
+
+  // Remove doc from docs collection and destroy it
+  docs.delete(doc.name);
+  doc.destroy();
+  // } catch (error) {
+  //   console.error("Error in saveHandler:", error);
+  //   throw error; // Rethrow the error to propagate it further
+  // }
+}
+
+// Helper function to prepare nodes data
+function prepareNodes(nodeMap) {
+  const nodeArray = [];
+  const deleteNodeId = [];
+  const nodeJson = nodeMap?.toJSON();
+
+  Object.keys(nodeJson).forEach((key) => {
+    if (nodeJson[key].action === "DELETE_NODES") {
+      deleteNodeId.push(nodeJson[key]?.nodes?.id);
+    } else {
+      nodeArray.push({ ...nodeJson[key].nodes, status: "Active" });
+    }
+  });
+
+  return { nodeArray, deleteNodeId };
+}
+
+// Helper function to prepare edges data
+function prepareEdges(edgesMap) {
+  const edgesArray = [];
+  const deleteEdgeId = [];
+  const edgesJson = edgesMap?.toJSON();
+
+  Object.keys(edgesJson).forEach((key) => {
+    if (edgesJson[key].action === "DELETE_EDGES") {
+      deleteEdgeId.push(edgesJson[key]?.edges?.id);
+    } else {
+      edgesArray.push({ ...edgesJson[key].edges, type: "buttonEdge" });
+    }
+  });
+
+  return { edgesArray, deleteEdgeId };
 }
