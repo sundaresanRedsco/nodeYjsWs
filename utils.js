@@ -463,64 +463,52 @@ async function runHandler(doc) {
         };
         // if (i != 0) {
         console.log(previous_edge_response);
-        const object =
-          previous_edge_response?.response?.apiResponse?.data ||
-          previous_edge_response?.response?.apiResponse ||
-          {};
+        const object = previous_edge_response?.response;
         console.log(`Processing object`, object);
+
         const Headerarray = currentNode?.data?.operations_header;
         const Bodyarray = currentNode?.data?.operations_input;
-        const Queryarray = currentNode?.data?.operations_auth;
-        const Autharray = currentNode?.data?.operations_query_param;
+        const Queryarray = currentNode?.data?.operations_query_param;
+        const Autharray = currentNode?.data?.operations_auth;
 
-        // Mapping and updating each array
-        const newHeaderArray = Headerarray?.map((item) => {
-          const key = item?.name;
-          let value =
-            object[item?.selected_param] ||
-            object[item?.name] ||
-            item?.test_value;
+        // if (object && previous_edge_response?.status === "SUCCESS") {
+        const updateArray = (array) => {
+          if (Array.isArray(array)) {
+            return array.map((item) => {
+              const key = item.name;
+              let value = "";
+              if (object) {
+                value = getOutput(object, item.selected_param || item.name);
+              } else {
+                value = item.test_value;
+              }
 
-          return { key, value: value.toString() };
-        });
+              if (typeof value === "object" || typeof value === "array") {
+                value = JSON.stringify(value);
+              } else {
+                value = value?.toString(); // Convert other values to string
+              }
 
-        const newBodyArray = Bodyarray?.map((item) => {
-          const key = item?.name;
-          let value =
-            object[item?.selected_param] ||
-            object[item?.name] ||
-            item?.test_value;
+              return { key, value: value };
+            });
+          }
+          return null;
+        };
 
-          return { key, value: value.toString() };
-        });
+        const newHeaderArray = updateArray(Headerarray);
+        const newBodyArray = updateArray(Bodyarray);
+        const newQueryArray = updateArray(Queryarray);
+        const newAuthArray = updateArray(Autharray);
 
-        const newQueryArray = Queryarray?.map((item) => {
-          const key = item?.name;
-          let value =
-            object[item?.selected_param] ||
-            object[item?.name] ||
-            item?.test_value;
-
-          return { key, value: value.toString() };
-        });
-
-        const newAuthArray = Autharray?.map((item) => {
-          const key = item?.name;
-          let value =
-            object[item?.selected_param] ||
-            object[item?.name] ||
-            item?.test_value;
-
-          return { key, value: value.toString() };
-        });
-
+        console.log(newQueryArray, "newQueryArray");
         // console.log(newBodyArray, "Bodyarray");
         requestBody = {
           operation_inputs: newBodyArray,
           operation_headers: newHeaderArray,
-          operation_authorization: newQueryArray,
-          operation_query_params: newAuthArray,
+          operation_authorization: newAuthArray,
+          operation_query_params: newQueryArray,
         };
+        // }
         // } else {
         // }
 
@@ -533,6 +521,7 @@ async function runHandler(doc) {
           currentNode,
           requestBody
         );
+        console.log(operationSuccess, "operationSuccess");
 
         const successValue = operationSuccess?.status === "SUCCESS";
         if (successValue) {
@@ -853,3 +842,38 @@ function prepareEdges(edgesMap) {
 
   return { edgesArray, deleteEdgeId };
 }
+
+function getOutput(obj, key) {
+  console.log("key", key);
+  if (obj.hasOwnProperty(key)) {
+    return obj[key];
+  }
+  for (const prop in obj) {
+    if (obj.hasOwnProperty(prop) && typeof obj[prop] === "object") {
+      if (Array.isArray(obj[prop])) {
+        return null; // If key is inside an array, return null
+      }
+      const result = getOutput(obj[prop], key);
+      if (result !== undefined) {
+        return result;
+      }
+    }
+  }
+  return undefined; // If key not found
+}
+
+// let dynamicObject = {};
+
+// // Iterate over each item in the responseData
+// jsonArray.forEach(item => {
+//     // If parent_order is 1, add a new key to the dynamicObject
+//     if (item.parent_order === 1) {
+//         dynamicObject[item.name] = {};
+//     }
+
+//     // If parent_order is greater than 1, add a new key to the corresponding parent object
+//     else if (item.parent_order > 1) {
+//         const parentName = jsonArray.find(parent => parent.param_order === item.parent_order && parent.record_id !== "").name;
+//         dynamicObject[parentName][item.name] = item.format_value; // Assuming format_value is the default value
+//     }
+// });
