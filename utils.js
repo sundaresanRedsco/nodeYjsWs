@@ -477,7 +477,7 @@ async function runHandler(doc) {
             return array.map((item) => {
               const key = item.name;
               let value = "";
-              if (object) {
+              if (object && previous_edge_response?.status === "SUCCESS") {
                 value = getOutput(object, item.selected_param || item.name);
               } else {
                 value = item.test_value;
@@ -524,11 +524,11 @@ async function runHandler(doc) {
         console.log(operationSuccess, "operationSuccess");
 
         const successValue = operationSuccess?.status === "SUCCESS";
-        if (successValue) {
-          previous_edge_response = operationSuccess;
-        } else {
-          previous_edge_response = null;
-        }
+        // if (successValue) {
+        previous_edge_response = operationSuccess;
+        // } else {
+        //   previous_edge_response = ;
+        // }
 
         nextEdge = getNextEdge(
           updatedEdges,
@@ -547,11 +547,13 @@ async function runHandler(doc) {
         }
       } else if (currentNode?.type === "responseNode") {
         console.log("printBlockresponseNode");
+
         nextEdge = getNextEdge(
           updatedEdges,
           currentEdge.target,
           true,
-          currentNode?.type
+          currentNode?.type,
+          previous_edge_response?.statusCode
         );
         if (runMap) {
           const updateData = runMap.get("run");
@@ -738,7 +740,13 @@ function getStartEdge(edges) {
   );
 }
 
-function getNextEdge(edges, targetId, operationSuccess, nodetype) {
+function getNextEdge(
+  edges,
+  targetId,
+  operationSuccess,
+  nodetype,
+  nodeEndVariable
+) {
   if (nodetype === "operationNode") {
     return edges.find(
       (edge) =>
@@ -750,7 +758,8 @@ function getNextEdge(edges, targetId, operationSuccess, nodetype) {
   } else if (nodetype === "responseNode") {
     return edges.find(
       (edge) =>
-        edge.source === targetId && edge.sourceHandle.endsWith("_output")
+        edge.source === targetId &&
+        edge.sourceHandle.endsWith("_" + nodeEndVariable)
     );
   }
   // Find the next edge based on the target ID and operation result
@@ -800,9 +809,9 @@ async function saveHandler(doc, docs) {
   //   const responseDelete = await axios.post(apiDeleteUrl, deleteRequestBody);
   //   const responseBody = await axios.post(apiUrl, requestBody);
 
-  // Remove doc from docs collection and destroy it
-  docs.delete(doc.name);
-  doc.destroy();
+    // Remove doc from docs collection and destroy it
+    docs.delete(doc.name);
+    doc.destroy();
   // } catch (error) {
   //   console.error("Error in saveHandler:", error);
   //   throw error; // Rethrow the error to propagate it further
@@ -819,7 +828,16 @@ function prepareNodes(nodeMap) {
     if (nodeJson[key].action === "DELETE_NODES") {
       deleteNodeId.push(nodeJson[key]?.nodes?.id);
     } else {
-      nodeArray.push({ ...nodeJson[key].nodes, status: "Active" });
+      if (nodeJson[key].nodes?.type === "operationNode") {
+        nodeArray.push({
+          ...nodeJson[key].nodes,
+          data: { ...nodeJson[key].nodes ,  },
+          status: "Active",
+
+        });
+      } else {
+        nodeArray.push({ ...nodeJson[key].nodes, status: "Active" });
+      }
     }
   });
 
