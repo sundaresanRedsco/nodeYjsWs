@@ -418,14 +418,18 @@ async function runHandler(doc) {
     let nodeJson = nodeMap?.toJSON();
 
     Object.keys(nodeJson).forEach((key) => {
-      updatedNodes.push(nodeJson[key].nodes);
+      if (nodeJson[key] !== "DELETE_NODES") {
+        updatedNodes.push(nodeJson[key].nodes);
+      }
     });
     // console.log(updatedNodes, "nodeArray");
     const updatedEdges = [];
     let edgesJson = edgesMap?.toJSON();
 
     Object.keys(edgesJson).forEach((key) => {
+      if (nodeJson[key] !== "DELETE_EDGES") {
       updatedEdges.push(edgesJson[key].edges);
+      }
     });
 
     // Start processing the flow
@@ -809,9 +813,9 @@ async function saveHandler(doc, docs) {
   //   const responseDelete = await axios.post(apiDeleteUrl, deleteRequestBody);
   //   const responseBody = await axios.post(apiUrl, requestBody);
 
-    // Remove doc from docs collection and destroy it
-    docs.delete(doc.name);
-    doc.destroy();
+  // Remove doc from docs collection and destroy it
+  docs.delete(doc.name);
+  doc.destroy();
   // } catch (error) {
   //   console.error("Error in saveHandler:", error);
   //   throw error; // Rethrow the error to propagate it further
@@ -831,9 +835,8 @@ function prepareNodes(nodeMap) {
       if (nodeJson[key].nodes?.type === "operationNode") {
         nodeArray.push({
           ...nodeJson[key].nodes,
-          data: { ...nodeJson[key].nodes ,  },
+          data: { ...nodeJson[key].nodes },
           status: "Active",
-
         });
       } else {
         nodeArray.push({ ...nodeJson[key].nodes, status: "Active" });
@@ -895,3 +898,5 @@ function getOutput(obj, key) {
 //         dynamicObject[parentName][item.name] = item.format_value; // Assuming format_value is the default value
 //     }
 // });
+
+// QA_FLow
