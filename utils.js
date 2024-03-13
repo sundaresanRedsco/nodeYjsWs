@@ -411,6 +411,10 @@ async function runHandler(doc) {
             data: JSON.parse(nodeJson[key]?.nodes?.data),
           });
         }
+      }else {
+      updatedNodes.filter(
+          (node) => node.id !== nodeJson[key]?.nodes?.id
+        );
       }
     });
 
@@ -432,6 +436,10 @@ async function runHandler(doc) {
             edgesJson[key]?.edges
           );
         }
+      }else {
+        updatedEdges.filter(
+          (node) => edge.id !== edgesJson[key]?.edges?.id
+        );
       }
     });
 
@@ -477,9 +485,13 @@ async function runHandler(doc) {
     while (currentEdge != undefined && currentEdge && continueFlow) {
       console.log(`Processing edge: ${currentEdge?.id}`);
       var currentNode = updatedNodes.find((x) => x.id === currentEdge?.target);
+      console.log(currentNode ,"currentNode")
+
+      const parsedData = typeof currentNode?.data === 'string' ? JSON.parse(currentNode.data) : currentNode?.data;
+
       currentNode = {
         ...currentNode,
-        data: JSON.parse(currentNode?.data),
+        data: parsedData,
       };
       console.log(`Processing i: ${i}`);
       if (currentNode?.type == "operationNode") {
