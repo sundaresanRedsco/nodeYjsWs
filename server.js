@@ -120,7 +120,6 @@
 // // Log server start
 // console.log(`WebSocket server is listening on port ${PORT}`);
 
-
 // #!/usr/bin/env node
 
 /**
@@ -135,7 +134,7 @@ const setupWSConnection = require("./utils.js").setupWSConnection;
 // const host = process.env.HOST || "localhost";
 const port = process.env.PORT || 9595;
 
-const express = require('express');
+const express = require("express");
 const app = express();
 
 // const host = "0.0.0.0";
@@ -177,8 +176,3 @@ server.on("upgrade", (request, socket, head) => {
 server.listen(port, () => {
   console.log(`running at 'host' on port ${port}`);
 });
-
-
-
-
-
