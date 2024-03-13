@@ -392,14 +392,75 @@ async function runHandler(doc) {
     let nodeJson = nodeMap?.toJSON();
 
     Object.keys(nodeJson).forEach((key) => {
-      updatedNodes.push(nodeJson[key].nodes);
+      if (nodeJson[key]?.action !== "DELETE_NODES") {
+        const existingNodeIndex = updatedNodes.findIndex(
+          (node) => node.id === nodeJson[key]?.nodes?.id
+        );
+        if (existingNodeIndex !== -1) {
+          // Update existing node
+          updatedNodes[existingNodeIndex] = {
+            ...nodeJson[key]?.nodes,
+
+            data: JSON.parse(nodeJson[key]?.nodes?.data),
+          };
+        } else {
+          // Add new node
+          updatedNodes.push({
+            // id: key, // Assuming key is the id of the node
+            ...nodeJson[key].nodes,
+            data: JSON.parse(nodeJson[key]?.nodes?.data),
+          });
+        }
+      }else {
+      updatedNodes.filter(
+          (node) => node.id !== nodeJson[key]?.nodes?.id
+        );
+      }
     });
-    // console.log(updatedNodes, "nodeArray");
-    const updatedEdges = [];
+
     let edgesJson = edgesMap?.toJSON();
     Object.keys(edgesJson).forEach((key) => {
-      updatedEdges.push(edgesJson[key].edges);
+      if (edgesJson[key]?.action !== "DELETE_EDGES") {
+        const existingNodeIndex = updatedEdges.findIndex(
+          (edge) => edge.id === edgesJson[key]?.edges?.id
+        );
+        if (existingNodeIndex !== -1) {
+          // Update existing node
+          updatedEdges[existingNodeIndex] = {
+            ...edgesJson[key]?.edges,
+          };
+        } else {
+          // Add new node
+          updatedEdges.push(
+            // id: key, // Assuming key is the id of the node
+            edgesJson[key]?.edges
+          );
+        }
+      }else {
+        updatedEdges.filter(
+          (node) => edge.id !== edgesJson[key]?.edges?.id
+        );
+      }
     });
+
+    console.log(updatedNodes, "updatedNodes");
+    console.log(updatedEdges, "updatedEdges");
+    // const updatedNodes = [];
+    // let nodeJson = nodeMap?.toJSON();
+
+    // Object.keys(nodeJson).forEach((key) => {
+    //   updatedNodes.push({
+    //     ...nodeJson[key].nodes,
+    //     data: JSON.parse(nodeJson[key]?.data),
+    //   });
+    // });
+    // console.log(updatedNodes, "nodeArray");
+    // const updatedEdges = [];
+    // let edgesJson = edgesMap?.toJSON();
+
+    // Object.keys(edgesJson).forEach((key) => {
+    //   updatedEdges.push(edgesJson[key].edges);
+    // });
 
     // Start processing the flow
     let currentEdge = getStartEdge(updatedEdges);
@@ -793,10 +854,10 @@ async function saveHandler(doc, docs) {
     // Remove doc from docs collection and destroy it
     docs.delete(doc.name);
     doc.destroy();
-  // } catch (error) {
-  //   console.error("Error in saveHandler:", error);
-  //   throw error; // Rethrow the error to propagate it further
-  // }
+  } catch (error) {
+    console.error("Error in saveHandler:", error);
+    throw error; // Rethrow the error to propagate it further
+  }
 }
 
 // Helper function to prepare nodes data
@@ -809,16 +870,17 @@ function prepareNodes(nodeMap) {
     if (nodeJson[key].action === "DELETE_NODES") {
       deleteNodeId.push(nodeJson[key]?.nodes?.id);
     } else {
-      if (nodeJson[key].nodes?.type === "operationNode") {
-        nodeArray.push({
-          ...nodeJson[key].nodes,
-          data: { ...nodeJson[key].nodes ,  },
-          status: "Active",
+      // if (nodeJson[key].nodes?.type === "operationNode") {
+      nodeArray.push({
+        ...nodeJson[key].nodes,
+        // data: JSON.stringify(nodeJson[key]?.nodes?.data),
+        data: nodeJson[key]?.nodes?.data,
 
-        });
-      } else {
-        nodeArray.push({ ...nodeJson[key].nodes, status: "Active" });
-      }
+        status: "Active",
+      });
+      // } else {
+      //   nodeArray.push({ ...nodeJson[key].nodes, status: "Active" });
+      // }
     }
   });
 
@@ -876,3 +938,26 @@ function getOutput(obj, key) {
 //         dynamicObject[parentName][item.name] = item.format_value; // Assuming format_value is the default value
 //     }
 // });
+
+async function getApiFLowData(flow_id) {
+  console.log("function Called");
+  try {
+    // Define the URL of the API endpoint you want to call
+    const apiUrl = `https://api.apiflow.pro/Api/Api_design_flow_service/get_api_design_flow_by_design_flow_node_edge_viewport?api_flow_id=${flow_id}`;
+    console.log("api url", apiUrl);
+    // Make a POST request to the API endpoint
+    const response = await axios.get(apiUrl);
+
+    // Log the response data
+    // console.log("Response:", response.data);
+
+    // Return the response data
+    console.log(response.data, "response.data");
+    return response.data;
+  } catch (error) {
+    // Handle errors here
+    console.error("Error:", error);
+    // You might want to throw the error here if you don't want to handle it locally
+    throw error;
+  }
+}
